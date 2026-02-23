@@ -88,8 +88,8 @@ const commands = {
   },
 
   status() {
-    console.log('📅 Agent Calendar Status');
-    console.log('========================\n');
+    console.log('📅 Google Calendar Skill Status');
+    console.log('===============================\n');
     console.log(`Account: ${config.google_calendar?.account || 'Not set'}`);
     console.log(`OneDrive: ${config.onedrive?.share_link ? '✅' : '❌'}`);
     console.log(`Auto Sync: ${config.schabi?.auto_sync ? '✅ Auto' : '❌ Manual'}\n`);
