@@ -1,0 +1,12 @@
+{
+  "name": "google-calendar-skill",
+  "version": "1.0.0",
+  "description": "Google Calendar automation for Mara's school schedule",
+  "main": "bin/google-calendar-skill",
+  "bin": {
+    "google-calendar-skill": "./bin/google-calendar-skill"
+  },
+  "keywords": ["openclaw", "teacher", "calendar", "school"],
+  "author": "OpenClaw Teacher Agent",
+  "license": "MIT"
+}

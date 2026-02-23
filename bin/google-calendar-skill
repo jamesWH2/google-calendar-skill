@@ -1,0 +1,111 @@
+#!/usr/bin/env node
+
+const path = require('path');
+const fs = require('fs');
+
+const LIB_DIR = path.join(__dirname, '..', 'src');
+const CalendarManager = require(path.join(LIB_DIR, 'calendar-manager'));
+const SchabiCalendarSync = require(path.join(LIB_DIR, 'schabi-sync'));
+
+const CONFIG_PATH = path.join(__dirname, '..', 'config.json');
+const config = fs.existsSync(CONFIG_PATH) 
+  ? JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
+  : {};
+
+const calendar = new CalendarManager(config.google_calendar);
+const schabiSync = new SchabiCalendarSync(config);
+
+function getArg(args, flag) {
+  const index = args.indexOf(flag);
+  return index !== -1 && args[index + 1] ? args[index + 1] : null;
+}
+
+const commands = {
+  init() {
+    console.log('📅 Teacher Calendar - Initialized');
+    console.log('✅ Ready to sync!');
+  },
+
+  async 'sync-schabi'(args) {
+    const dryRun = args.includes('--dry-run');
+    await schabiSync.syncAll({ dryRun });
+  },
+
+  async 'create-exam'(args) {
+    const subject = getArg(args, '--subject');
+    const date = getArg(args, '--date');
+    const topicsStr = getArg(args, '--topics');
+    const topics = topicsStr ? topicsStr.split(',').map(t => t.trim()) : [];
+    
+    if (!subject || !date) {
+      console.error('Usage: teacher-calendar create-exam --subject "Mathe" --date "2026-02-25"');
+      process.exit(1);
+    }
+    
+    const event = calendar.createExamEvent({
+      subject, date, topics,
+      onedriveLink: config.onedrive?.share_link
+    });
+    
+    if (event) console.log('✅ Exam event created!');
+  },
+
+  async 'create-homework'(args) {
+    const subject = getArg(args, '--subject');
+    const due = getArg(args, '--due');
+    const description = getArg(args, '--description') || 'Homework';
+    
+    if (!subject || !due) {
+      console.error('Usage: teacher-calendar create-homework --subject "Deutsch" --due "2026-02-26"');
+      process.exit(1);
+    }
+    
+    const event = calendar.createHomeworkEvent({
+      subject, dueDate: due, description,
+      onedriveLink: config.onedrive?.share_link
+    });
+    
+    if (event) console.log('✅ Homework deadline created!');
+  },
+
+  async 'create-study'(args) {
+    const subject = getArg(args, '--subject');
+    const topic = getArg(args, '--topic');
+    const date = getArg(args, '--date');
+    const startTime = getArg(args, '--start') || '17:30';
+    
+    if (!subject || !topic || !date) {
+      console.error('Usage: teacher-calendar create-study --subject "Mathe" --topic "Brüche" --date "2026-02-24"');
+      process.exit(1);
+    }
+    
+    const event = calendar.createStudyEvent({
+      subject, topic, date, startTime,
+      onedriveLink: config.onedrive?.share_link
+    });
+    
+    if (event) console.log('✅ Study session created!');
+  },
+
+  status() {
+    console.log('📅 Agent Calendar Status');
+    console.log('========================\n');
+    console.log(`Account: ${config.google_calendar?.account || 'Not set'}`);
+    console.log(`OneDrive: ${config.onedrive?.share_link ? '✅' : '❌'}`);
+    console.log(`Auto Sync: ${config.schabi?.auto_sync ? '✅ Auto' : '❌ Manual'}\n`);
+  }
+};
+
+async function main() {
+  const args = process.argv.slice(2);
+  const command = args[0] || 'status';
+  
+  if (commands[command]) {
+    await commands[command](args.slice(1));
+  } else {
+    console.error(`Unknown command: ${command}`);
+    process.exit(1);
+  }
+}
+
+main().catch(console.error);

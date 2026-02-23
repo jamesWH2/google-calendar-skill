@@ -1,0 +1,17 @@
+{
+  "google_calendar": {
+    "account": "workhorsejames@gmail.com",
+    "colors": {
+      "exam": 11,
+      "homework": 6,
+      "study": 5
+    }
+  },
+  "onedrive": {
+    "share_link": "https://1drv.ms/f/c/bc376749b0341a93/IgCe9NBOX3YSRa9Fvn6IJwJhAVa1Hk1mVGWWXfaH2bIZw50"
+  },
+  "schabi": {
+    "auto_sync": true,
+    "skill_path": "~/.openclaw/skills/schabi-integration"
+  }
+}
