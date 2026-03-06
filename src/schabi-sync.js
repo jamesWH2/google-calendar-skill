@@ -3,11 +3,10 @@
  */
 
 const CalendarManager = require('./calendar-manager');
-const { execSync } = require('child_process');
 
 class SchabiCalendarSync {
   constructor(config = {}) {
-    this.calendar = new CalendarManager(config.calendar);
+    this.calendar = new CalendarManager(config.google_calendar);
     this.schabiSkillPath = config.schabi?.skill_path || 
       '~/.openclaw/skills/schabi-integration';
   }

@@ -35,15 +35,17 @@ const commands = {
     const subject = getArg(args, '--subject');
     const date = getArg(args, '--date');
     const topicsStr = getArg(args, '--topics');
+    const calendarId = getArg(args, '--calendar');
     const topics = topicsStr ? topicsStr.split(',').map(t => t.trim()) : [];
     
     if (!subject || !date) {
-      console.error('Usage: teacher-calendar create-exam --subject "Mathe" --date "2026-02-25"');
+      console.error('Usage: google-calendar-skill create-exam --subject "Mathe" --date "2026-02-25"');
       process.exit(1);
     }
     
-    const event = calendar.createExamEvent({
+    const event = await calendar.createExamEvent({
       subject, date, topics,
+      calendarId,
       onedriveLink: config.onedrive?.share_link
     });
     
@@ -54,14 +56,16 @@ const commands = {
     const subject = getArg(args, '--subject');
     const due = getArg(args, '--due');
     const description = getArg(args, '--description') || 'Homework';
+    const calendarId = getArg(args, '--calendar');
     
     if (!subject || !due) {
-      console.error('Usage: teacher-calendar create-homework --subject "Deutsch" --due "2026-02-26"');
+      console.error('Usage: google-calendar-skill create-homework --subject "Deutsch" --due "2026-02-26"');
       process.exit(1);
     }
     
-    const event = calendar.createHomeworkEvent({
+    const event = await calendar.createHomeworkEvent({
       subject, dueDate: due, description,
+      calendarId,
       onedriveLink: config.onedrive?.share_link
     });
     
@@ -73,14 +77,16 @@ const commands = {
     const topic = getArg(args, '--topic');
     const date = getArg(args, '--date');
     const startTime = getArg(args, '--start') || '17:30';
+    const calendarId = getArg(args, '--calendar');
     
     if (!subject || !topic || !date) {
-      console.error('Usage: teacher-calendar create-study --subject "Mathe" --topic "Brüche" --date "2026-02-24"');
+      console.error('Usage: google-calendar-skill create-study --subject "Mathe" --topic "Brüche" --date "2026-02-24"');
       process.exit(1);
     }
     
-    const event = calendar.createStudyEvent({
+    const event = await calendar.createStudyEvent({
       subject, topic, date, startTime,
+      calendarId,
       onedriveLink: config.onedrive?.share_link
     });
     

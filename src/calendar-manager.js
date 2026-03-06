@@ -1,13 +1,16 @@
 /**
  * Teacher Calendar Manager
- * Wrapper around gog for Google Calendar operations
+ * Native Google Calendar API implementation using Service Account
  */
 
-const { execSync } = require('child_process');
+const { google } = require('googleapis');
+const fs = require('fs');
 
 class CalendarManager {
   constructor(config = {}) {
     this.account = config.account || 'workhorsejames@gmail.com';
+    this.keyPath = config.service_account_key;
+    
     this.colors = {
       exam: 11,      // Red
       homework: 6,   // Orange
@@ -15,29 +18,97 @@ class CalendarManager {
       reminder: 2,   // Green
       ...config.colors
     };
+
+    if (!this.keyPath || !fs.existsSync(this.keyPath)) {
+      throw new Error(`Service account key not found at: ${this.keyPath}`);
+    }
+
+    this.auth = new google.auth.GoogleAuth({
+      keyFile: this.keyPath,
+      scopes: ['https://www.googleapis.com/auth/calendar'],
+    });
+
+    this.calendar = google.calendar({ version: 'v3', auth: this.auth });
   }
 
-  createEvent({ summary, start, end, description = '', color = 1 }) {
+  
+  async getEvents({ timeMin, timeMax, maxResults = 200, calendarId = null }) {
     try {
-      let cmd = `gog calendar create ${this.account} `;
-      cmd += `--summary "${summary}" `;
-      cmd += `--from "${start}" `;
-      cmd += `--to "${end}" `;
-      cmd += `--event-color ${color}`;
+      const response = await this.calendar.events.list({
+        calendarId: calendarId || this.account,
+        timeMin: timeMin,
+        timeMax: timeMax,
+        maxResults: maxResults,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+      return response.data.items || [];
+    } catch (error) {
+      console.error('Error fetching events:', error.message);
+      return [];
+    }
+  }
+
+  async deleteEvent({ eventId, calendarId = null }) {
+    try {
+      await this.calendar.events.delete({
+        calendarId: calendarId || this.account,
+        eventId: eventId,
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting event:', error.message);
+      return false;
+    }
+  }
+
+  async createEvent({ summary, start, end, description = '', color = 1, calendarId = null }) {
+    try {
+      // Deduplication check
+      const timeMin = new Date(start);
+      timeMin.setHours(0,0,0,0);
+      const timeMax = new Date(start);
+      timeMax.setHours(23,59,59,999);
       
-      if (description) {
-        cmd += ` --description "${description.replace(/"/g, '\\"')}"`;
+      const existing = await this.getEvents({
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
+        calendarId: calendarId || this.account
+      });
+      
+      const isDuplicate = existing.some(e => e.summary === summary);
+      if (isDuplicate) {
+        console.log(`Event "${summary}" already exists on this day. Skipping.`);
+        return existing.find(e => e.summary === summary); // Return existing event
       }
 
-      const result = execSync(cmd, { encoding: 'utf8' });
-      return this._parseEvent(result);
+      const event = {
+        summary,
+        description,
+        start: {
+          dateTime: start,
+          timeZone: 'Europe/Zurich',
+        },
+        end: {
+          dateTime: end,
+          timeZone: 'Europe/Zurich',
+        },
+        colorId: color.toString(),
+      };
+
+      const response = await this.calendar.events.insert({
+        calendarId: calendarId || this.account,
+        resource: event,
+      });
+
+      return response.data;
     } catch (error) {
       console.error('Error creating event:', error.message);
       return null;
     }
   }
 
-  createExamEvent({ subject, date, topics = [], onedriveLink = null }) {
+  async createExamEvent({ subject, date, topics = [], onedriveLink = null, calendarId = null }) {
     const summary = `📝 ${subject.toUpperCase()} PRÜFUNG - Mara`;
     const start = new Date(date);
     const end = new Date(start.getTime() + 60 * 60 * 1000);
@@ -61,11 +132,12 @@ class CalendarManager {
       start: start.toISOString(),
       end: end.toISOString(),
       description,
-      color: this.colors.exam
+      color: this.colors.exam,
+      calendarId
     });
   }
 
-  createHomeworkEvent({ subject, dueDate, description: hwDescription, onedriveLink = null }) {
+  async createHomeworkEvent({ subject, dueDate, description: hwDescription, onedriveLink = null, calendarId = null }) {
     const summary = `📚 Hausaufgabe: ${subject}`;
     const start = new Date(`${dueDate}T23:45:00`);
     const end = new Date(`${dueDate}T23:59:00`);
@@ -83,11 +155,12 @@ class CalendarManager {
       start: start.toISOString(),
       end: end.toISOString(),
       description: desc,
-      color: this.colors.homework
+      color: this.colors.homework,
+      calendarId
     });
   }
 
-  createStudyEvent({ subject, topic, date, startTime = '17:30', duration = 90, onedriveLink = null }) {
+  async createStudyEvent({ subject, topic, date, startTime = '17:30', duration = 90, onedriveLink = null, calendarId = null }) {
     const summary = `📚 Lernzeit: ${topic}`;
     const start = new Date(`${date}T${startTime}:00`);
     const end = new Date(start.getTime() + duration * 60 * 1000);
@@ -95,9 +168,8 @@ class CalendarManager {
     let description = `Lernzeit für ${subject}\n\nThema: ${topic}\n\n`;
     
     if (onedriveLink) {
-      description += `Material: ${onedriveLink}\n\n`;
+        description += `Material: ${onedriveLink}\n\n`;
     }
-    
     description += 'Viel Erfolg! 💪';
 
     return this.createEvent({
@@ -105,22 +177,9 @@ class CalendarManager {
       start: start.toISOString(),
       end: end.toISOString(),
       description,
-      color: this.colors.study
+      color: this.colors.study,
+      calendarId
     });
-  }
-
-  _parseEvent(output) {
-    const lines = output.split('\n');
-    const event = {};
-    
-    lines.forEach(line => {
-      const [key, value] = line.split('\t');
-      if (key && value) {
-        event[key] = value;
-      }
-    });
-    
-    return event;
   }
 }
 

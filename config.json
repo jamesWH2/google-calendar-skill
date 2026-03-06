@@ -1,6 +1,7 @@
 {
   "google_calendar": {
     "account": "workhorsejames@gmail.com",
+    "service_account_key": "/home/dataling/.openclaw/config/credentials/service-account-james.json",
     "colors": {
       "exam": 11,
       "homework": 6,

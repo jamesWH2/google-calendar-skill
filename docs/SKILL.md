@@ -23,6 +23,27 @@ google-calendar-skill sync-schabi
 google-calendar-skill create-study --subject mathe --topic "Brüche" --date 2026-02-24
 ```
 
+## Setup (SOTA/Service Account)
+
+1.  Create a Google Service Account JSON key.
+2.  Store it at `~/.openclaw/config/credentials/service-account-james.json`.
+3.  Share your Google Calendar with the service account's `client_email` ("Make changes to events").
+4.  Update `config.json` with the service account path:
+
+```json
+{
+  "google_calendar": {
+    "account": "your-calendar@gmail.com",
+    "service_account_key": "/home/dataling/.openclaw/config/credentials/service-account-james.json"
+  }
+}
+```
+
+## Legacy Setup (OAuth)
+
+(Deprecated) `gog auth credentials ...` and `gog auth add ...`.
+Requires periodic manual re-authentication and is not recommended for background agents.
+
 ## Features
 
 - 🔄 **Schabi.ch Auto-Sync**: Automatically creates calendar events from schabi.ch homework and exams
