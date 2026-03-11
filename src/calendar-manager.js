@@ -62,7 +62,7 @@ class CalendarManager {
     }
   }
 
-  async createEvent({ summary, start, end, description = '', color = 1, calendarId = null }) {
+  async createEvent({ summary, start, end, description = '', color = 1, calendarId = null, allDay = false, extendedProperties = null }) {
     try {
       // Deduplication check
       const timeMin = new Date(start);
@@ -76,25 +76,43 @@ class CalendarManager {
         calendarId: calendarId || this.account
       });
       
-      const isDuplicate = existing.some(e => e.summary === summary);
-      if (isDuplicate) {
+      const duplicate = existing.find(e => {
+        if (extendedProperties?.private?.sourceKey) {
+          const existingSourceKey = e.extendedProperties?.private?.sourceKey;
+          if (existingSourceKey === extendedProperties.private.sourceKey) {
+            return true;
+          }
+        }
+        return e.summary === summary;
+      });
+      if (duplicate) {
         console.log(`Event "${summary}" already exists on this day. Skipping.`);
-        return existing.find(e => e.summary === summary); // Return existing event
+        return duplicate; // Return existing event
       }
 
       const event = {
         summary,
         description,
-        start: {
-          dateTime: start,
-          timeZone: 'Europe/Zurich',
-        },
-        end: {
-          dateTime: end,
-          timeZone: 'Europe/Zurich',
-        },
         colorId: color.toString(),
       };
+
+      if (allDay) {
+        event.start = { date: start };
+        event.end = { date: end };
+      } else {
+        event.start = {
+          dateTime: start,
+          timeZone: 'Europe/Zurich',
+        };
+        event.end = {
+          dateTime: end,
+          timeZone: 'Europe/Zurich',
+        };
+      }
+
+      if (extendedProperties) {
+        event.extendedProperties = extendedProperties;
+      }
 
       const response = await this.calendar.events.insert({
         calendarId: calendarId || this.account,
